@@ -1,6 +1,16 @@
+using SmartQuiz.Persistence.Extensions; 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
+var configuration = builder.Configuration;
+//var services = builder.Services;
+//var env = builder.Environment;
+
+// Add services to the container.
+builder.Services.AddDependencies(configuration);
+builder.Services.AddAuthentication();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

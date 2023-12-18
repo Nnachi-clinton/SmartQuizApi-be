@@ -9,7 +9,7 @@ namespace SmartQuiz.Configurations
             Log.Logger = new LoggerConfiguration()
                 .ReadFrom.Configuration(configuration)
                 .WriteTo.Console()
-                .WriteTo.File("C:/temp/TicketEaseLog.txt", rollingInterval: RollingInterval.Day)
+                .WriteTo.File("C:/temp/SmartQuizLog.txt", rollingInterval: RollingInterval.Day)
                 .CreateLogger();
 
             services.AddLogging(loggingBuilder =>

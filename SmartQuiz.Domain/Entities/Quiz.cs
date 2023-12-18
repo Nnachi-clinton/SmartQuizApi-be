@@ -1,12 +1,36 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace SmartQuiz.Domain.Entities
 {
-    internal class Quiz
+    public class Quiz
     {
+        [Key]
+        public string QuizID { get; set; }
+
+        [Required]
+        public string Title { get; set; }
+
+        [Required]
+        public string Description { get; set; }
+
+        public bool IsPublic { get; set; }
+
+        public bool HasTimeLimit { get; set; }
+
+        public int TimeLimitMinutes { get; set; }
+
+        public int MaxAttempts { get; set; }
+
+        // Media integration
+        public string ImageUrl { get; set; }
+
+        public string VideoUrl { get; set; }
+
+        // Navigation properties
+        public int EducatorId { get; set; }
+        public Educator Educator { get; set; }
+
+        //public ICollection<Question> Questions { get; set; }
+
     }
 }

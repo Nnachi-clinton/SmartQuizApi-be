@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SmartQuiz.Domain.Enums
+﻿namespace SmartQuiz.Domain.Enums
 {
-    internal class UserRoles
+    public enum UserRole
     {
+        Educator,
+        Student
     }
 }

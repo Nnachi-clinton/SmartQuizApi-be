@@ -1,6 +1,9 @@
 ﻿namespace SmartQuiz.Domain.Enums
 {
-    internal class Class1
+    public enum QuestionType
     {
+        MultipleChoice,
+        TrueFalse,
+        ShortAnswer
     }
 }

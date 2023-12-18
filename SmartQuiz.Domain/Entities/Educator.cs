@@ -1,22 +1,16 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using SmartQuiz.Domain.Entities;
+using System.ComponentModel.DataAnnotations;
 
-namespace SmartQuiz.Domain.Entities
+public class Educator : BaseEntity
 {
-    public class Educator
-    {
-        [Key]
-        public int EducatorId { get; set; }
-
-        [Required]
-        public string FirstName { get; set; }
-
-        [Required]
-        public string LastName { get; set; }
-
-        // Identity-related properties
-        public string UserName { get; set; }
-
-        // Navigation property
-        public ICollection<Quiz> Quizzes { get; set; }
-    }
+    [Key]
+    public string Id { get; set; }
+    [Required]
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public string Address { get; set; }
+    public string State { get; set; }
+    public string Gender { get; set; }
+    public string ImageUrl { get; set; }
+    public ICollection<Quiz> Quizzes { get; set; }
 }

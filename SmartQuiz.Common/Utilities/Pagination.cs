@@ -1,6 +1,7 @@
 ﻿namespace SmartQuiz.Common.Utilities
 {
-    internal class Class1
+    public class Pagination<T>
     {
+                  
     }
 }

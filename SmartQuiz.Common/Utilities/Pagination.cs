@@ -18,7 +18,7 @@
                 Data = pagedData,
                 TotalPageCount = totalPagedCount,
                 CurrentPage = Page,
-                PerPage = pagedData.Count(),
+                PerPage = PerPage,
                 TotalCount = totalData
             };
         }

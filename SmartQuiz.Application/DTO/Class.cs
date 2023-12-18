@@ -1,6 +1,6 @@
 ﻿namespace SmartQuiz.Configurations
 {
-    public class Class
+    public class Class5
     {
     }
 }

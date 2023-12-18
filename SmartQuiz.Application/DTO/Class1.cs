@@ -1,4 +1,4 @@
-﻿namespace SmartQuiz.Domain.Entities
+﻿namespace SmartQuiz.Application.DTO
 {
     internal class Class1
     {

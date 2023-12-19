@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using SmartQuiz.Application.Interfaces.Services;
 using SmartQuiz.Domain;
 using SmartQuiz.Domain.Entities;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace SmartQuiz.Application.ServicesImplementation
 {
@@ -44,7 +45,26 @@ namespace SmartQuiz.Application.ServicesImplementation
 
         public ApiResponse<string> ExtractUserIdFromToken(string authToken)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var token = authToken.Replace("Bearer ", "");
+
+                var handler = new JwtSecurityTokenHandler();
+                var jsonToken = handler.ReadToken(token) as JwtSecurityToken;
+
+                var userId = jsonToken?.Claims.FirstOrDefault(claim => claim.Type == JwtRegisteredClaimNames.Sub)?.Value;
+
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    return new ApiResponse<string>(false, "Invalid or expired token.", 401, null, new List<string>());
+                }
+
+                return new ApiResponse<string>(true, "User ID extracted successfully.", 200, userId, new List<string>());
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<string>(false, "Error extracting user ID from token.", 500, null, new List<string> { ex.Message });
+            }
         }
 
         public Task<ApiResponse<string>> ForgotPasswordAsync(string email)

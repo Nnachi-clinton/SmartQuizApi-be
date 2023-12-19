@@ -1,6 +1,6 @@
 ﻿namespace SmartQuiz.Persistence.Repositories
 {
-    internal class Class2
+    public class EducatorRepository
     {
     }
 }

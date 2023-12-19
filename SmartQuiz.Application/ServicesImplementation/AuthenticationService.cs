@@ -1,11 +1,14 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using SmartQuiz.Application.Interfaces.Services;
 using SmartQuiz.Domain;
 using SmartQuiz.Domain.Entities;
 using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 
 namespace SmartQuiz.Application.ServicesImplementation
 {
@@ -14,16 +17,18 @@ namespace SmartQuiz.Application.ServicesImplementation
         private readonly UserManager<Student> _userManager;
         private readonly SignInManager<Student> _signInManager;
         private readonly ILogger<AuthenticationService> _logger;
+        private readonly IConfiguration _config;
         private readonly IOptions<EmailSettings> _emailSettings;
         //private readonly EmailServices _emailServices;
 
-        public AuthenticationService(UserManager<Student> userManager, SignInManager<Student> signInManager, ILogger<AuthenticationService> logger, IOptions<EmailSettings> emailSettings)
+        public AuthenticationService(UserManager<Student> userManager, SignInManager<Student> signInManager, ILogger<AuthenticationService> logger, IOptions<EmailSettings> emailSettings, IConfiguration config)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
+            _config = config;
             //_emailSettings = emailSettings.Value;
-           // _emailServices = new EmailServices(emailSettings);
+            // _emailServices = new EmailServices(emailSettings);
         }
 
         public async Task<ApiResponse<string>> ChangePasswordAsync(Student student, string currentPassword, string newPassword)
@@ -145,9 +150,43 @@ namespace SmartQuiz.Application.ServicesImplementation
             }
         }
 
-        public Task<ApiResponse<string>> ValidateTokenAsync(string token)
+        public async Task<ApiResponse<string>> ValidateTokenAsync(string token)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var key = Encoding.UTF8.GetBytes(_config.GetSection("JwtSettings:Secret").Value);
+
+                var validationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = null,
+                    ValidAudience = null,
+                    IssuerSigningKey = new SymmetricSecurityKey(key)
+                };
+
+                SecurityToken securityToken;
+                var principal =  tokenHandler.ValidateToken(token, validationParameters, out securityToken);
+
+                var emailClaim = principal.FindFirst(JwtRegisteredClaimNames.Email)?.Value;
+
+                return new ApiResponse<string>(true, "Token is valid.", 200, null, new List<string>());
+            }
+            catch (SecurityTokenException ex)
+            {
+                _logger.LogError(ex, "Token validation failed");
+                var errorList = new List<string> { ex.Message };
+                return new ApiResponse<string>(false, "Token validation failed.", 400, null, errorList);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred during token validation");
+                var errorList = new List<string> { ex.Message };
+                return new ApiResponse<string>(false, "Error occurred during token validation", 500, null, errorList);
+            }
         }
     }
 }

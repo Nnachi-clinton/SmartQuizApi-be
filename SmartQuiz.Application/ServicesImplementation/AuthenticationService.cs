@@ -18,7 +18,7 @@ namespace SmartQuiz.Application.ServicesImplementation
         private readonly SignInManager<Student> _signInManager;
         private readonly ILogger<AuthenticationService> _logger;
         private readonly IConfiguration _config;
-        private readonly IOptions<EmailSettings> _emailSettings;
+        //private readonly IOptions<EmailSettings> _emailSettings;
         //private readonly EmailServices _emailServices;
 
         public AuthenticationService(UserManager<Student> userManager, SignInManager<Student> signInManager, ILogger<AuthenticationService> logger, IOptions<EmailSettings> emailSettings, IConfiguration config)
@@ -78,43 +78,43 @@ namespace SmartQuiz.Application.ServicesImplementation
             }
         }
 
-        public async Task<ApiResponse<string>> ForgotPasswordAsync(string email)
-        {
-            try
-            {
-                var student = await _userManager.FindByEmailAsync(email);
+        //public async Task<ApiResponse<string>> ForgotPasswordAsync(string email)
+        //{
+        //    try
+        //    {
+        //        var student = await _userManager.FindByEmailAsync(email);
 
-                if (student == null)
-                {
-                    return new ApiResponse<string>(false, "User not found or email not confirmed.", StatusCodes.Status404NotFound, null, new List<string>());
-                }
-                string token = await _userManager.GeneratePasswordResetTokenAsync(student);
+        //        if (student == null)
+        //        {
+        //            return new ApiResponse<string>(false, "User not found or email not confirmed.", StatusCodes.Status404NotFound, null, new List<string>());
+        //        }
+        //        string token = await _userManager.GeneratePasswordResetTokenAsync(student);
 
-                student.PasswordResetToken = token;
-                student.ResetTokenExpires = DateTime.UtcNow.AddHours(24);
+        //        student.PasswordResetToken = token;
+        //        student.ResetTokenExpires = DateTime.UtcNow.AddHours(24);
 
-                await _userManager.UpdateAsync(student);
+        //        await _userManager.UpdateAsync(student);
 
-                var resetPasswordUrl = "http://localhost:3000/reset-password?email=" + Uri.EscapeDataString(email) + "&token=" + Uri.EscapeDataString(token);
+        //        var resetPasswordUrl = "http://localhost:3000/reset-password?email=" + Uri.EscapeDataString(email) + "&token=" + Uri.EscapeDataString(token);
 
-                var mailRequest = new MailRequest
-                {
-                    ToEmail = email,
-                    Subject = "TicketEase Password Reset Instructions",
-                    Body = $"Please reset your password by clicking <a href='{resetPasswordUrl}'>here</a>."
-                };
-                //await _emailServices.SendHtmlEmailAsync(mailRequest);
+        //        var mailRequest = new MailRequest
+        //        {
+        //            ToEmail = email,
+        //            Subject = "TicketEase Password Reset Instructions",
+        //            Body = $"Please reset your password by clicking <a href='{resetPasswordUrl}'>here</a>."
+        //        };
+        //        await _emailServices.SendHtmlEmailAsync(mailRequest);
 
-                return new ApiResponse<string>(true, "Password reset email sent successfully.", 200, null, new List<string>());
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error occurred while resolving password change");
-                var errorList = new List<string>();
-                errorList.Add(ex.Message);
-                return new ApiResponse<string>(true, "Error occurred while resolving password change", 500, null, errorList);
-            }
-        }
+        //        return new ApiResponse<string>(true, "Password reset email sent successfully.", 200, null, new List<string>());
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error occurred while resolving password change");
+        //        var errorList = new List<string>();
+        //        errorList.Add(ex.Message);
+        //        return new ApiResponse<string>(true, "Error occurred while resolving password change", 500, null, errorList);
+        //    }
+        //}
 
         public async Task<ApiResponse<string>> ResetPasswordAsync(string email, string token, string newPassword)
         {

@@ -1,6 +1,8 @@
+using SmartQuiz.Configurations;
+using SmartQuiz.Persistence.Extensions; 
+
 using CloudinaryDotNet;
 using Microsoft.Extensions.Options;
-using SmartQuiz.Application.ServicesImplementation;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton(provider =>
@@ -15,6 +17,18 @@ builder.Services.AddSingleton(provider =>
 });
 
 // Add services to the container.
+
+var configuration = builder.Configuration;
+//var services = builder.Services;
+//var env = builder.Environment;
+
+// Add services to the container.
+builder.Services.AddDependencies(configuration);
+builder.Services.AddAuthentication();
+builder.Services.AuthenticationConfiguration(configuration);
+
+// Identity  configuration
+builder.Services.AddLoggingConfiguration(configuration);
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

@@ -1,6 +1,6 @@
 ﻿using CloudinaryDotNet;
 using Microsoft.Extensions.Options;
-using SmartQuiz.Application.ServicesImplementation;
+using SmartQuiz.Domain.Entities;
 
 namespace SmartQuiz.Configurations
 {

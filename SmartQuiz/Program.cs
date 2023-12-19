@@ -1,8 +1,8 @@
 using SmartQuiz.Configurations;
-using SmartQuiz.Persistence.Extensions; 
-
 using CloudinaryDotNet;
 using Microsoft.Extensions.Options;
+using SmartQuiz.Persistence.Extensions;
+using SmartQuiz.Domain.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton(provider =>

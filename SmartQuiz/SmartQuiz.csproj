@@ -11,4 +11,9 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SmartQuiz.Application\SmartQuiz.Application.csproj" />
+    <ProjectReference Include="..\SmartQuiz.Domain\SmartQuiz.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

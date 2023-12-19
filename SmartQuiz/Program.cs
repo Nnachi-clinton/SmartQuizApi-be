@@ -1,7 +1,20 @@
 using SmartQuiz.Configurations;
-using SmartQuiz.Persistence.Extensions; 
+using CloudinaryDotNet;
+using Microsoft.Extensions.Options;
+using SmartQuiz.Persistence.Extensions;
+using SmartQuiz.Domain.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton(provider =>
+{
+    var cloudinarySettings = provider.GetRequiredService<IOptions<CloudinarySetting>>().Value;
+
+    Account cloudinaryAccount = new(
+        cloudinarySettings.CloudName,
+        cloudinarySettings.APIKey,
+        cloudinarySettings.APISecret);
+    return new Cloudinary(cloudinaryAccount);
+});
 
 // Add services to the container.
 

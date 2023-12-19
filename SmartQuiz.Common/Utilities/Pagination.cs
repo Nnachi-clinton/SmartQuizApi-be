@@ -12,7 +12,7 @@
             int totalData = data.Count();
             int totalPagedCount = (int)Math.Ceiling((double)totalData / PerPage);
             var pagedData = data.Skip((Page - 1) * PerPage).Take(PerPage);
-
+            await Task.Delay(1);
             return new PageResult<IEnumerable<T>>
             {
                 Data = pagedData,

@@ -3,7 +3,7 @@
 namespace SmartQuiz.Domain.Entities
 {
     public class Quiz : BaseEntity
-    {
+    {       
         [Required]
         public string Title { get; set; }
         [Required]

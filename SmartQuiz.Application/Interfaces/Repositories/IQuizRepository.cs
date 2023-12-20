@@ -7,8 +7,8 @@ namespace SmartQuiz.Application.Interfaces.Repositories
     {
         List<Quiz> GetQuizAsync();
         void AddQuizAsync(Quiz quiz);
-        void DeleteQuizAsync(Quiz quiz, CancellationToken cancellationToken = default);
-        void DeleteAllQuizAsync(List<Quiz> quiz, CancellationToken cancellationToken = default);
+        void DeleteQuizAsync(Quiz quiz);
+        void DeleteAllQuizAsync(List<Quiz> quiz);
         public List<Quiz> FindQuizAsync(Expression<Func<Quiz, bool>> condition);
         Quiz GetQuizById(string id);
         void UpdateQuizAsync(Quiz quiz);

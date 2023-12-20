@@ -20,32 +20,32 @@ namespace SmartQuiz.Persistence.Repositories
 
         public void DeleteAllEducatorsAsync(List<Educator> educators)
         {
-            DeleteAllEducatorsAsync(educators);
+            DeleteAllAsync(educators);
         }
 
         public void DeleteEducatorAsync(Educator educator)
         {
-            DeleteEducatorAsync(educator);
+            DeleteAsync(educator);
         }
 
         public List<Educator> FindEducatorAsync(Expression<Func<Educator, bool>> condition)
         {
-            return FindEducatorAsync(condition);
+            return FindAsync(condition);
         }
 
         public Educator GetEducatorById(string id)
         {
-            return GetEducatorById(id);
+            return GetByIdAsync(id);
         }
 
         public List<Educator> GetEducatorsAsync()
         {
-            return GetEducatorsAsync();
+            return GetAllAsync();
         }
 
         public void UpdateEducatorAsync(Educator educator)
         {
-            UpdateEducatorAsync(educator);
+            UpdateAsync(educator);
         }
     }
 }

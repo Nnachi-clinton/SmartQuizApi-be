@@ -43,6 +43,11 @@ namespace SmartQuiz.Persistence.Repositories
             return _context.Set<T>().ToList();
         }
 
+        public List<T> GetAllAsync(Expression<Func<T, bool>> educatorId)
+        {
+            return _context.Set<T>().Where(educatorId).ToList();
+        }
+
         public T GetByIdAsync(string id)
         {
             return _context.Set<T>().Find(id);

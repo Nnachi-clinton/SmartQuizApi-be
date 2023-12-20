@@ -6,6 +6,7 @@ namespace SmartQuiz.Application.Interfaces.Repositories
     public interface IQuizRepository : IGenericRepository<Quiz>
     {
         List<Quiz> GetQuizAsync();
+        List<Quiz> GetAllQuiz(Expression<Func<Quiz, bool>> educatorid);
         void AddQuizAsync(Quiz quiz);
         void DeleteQuizAsync(Quiz quiz);
         void DeleteAllQuizAsync(List<Quiz> quiz);

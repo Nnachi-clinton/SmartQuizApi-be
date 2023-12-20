@@ -6,5 +6,6 @@ namespace SmartQuiz.Controllers
     [ApiController]
     public class EducatorController : ControllerBase
     {
+
     }
 }

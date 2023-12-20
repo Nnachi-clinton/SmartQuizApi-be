@@ -7,8 +7,8 @@ namespace SmartQuiz.Application.Interfaces.Repositories
     {
         List<Educator> GetEducatorsAsync();
         void AddEducatorAsync(Educator educator);
-        void DeleteEducatorAsync(Educator educator, CancellationToken cancellationToken = default);
-        void DeleteAllEducatorsAsync(List<Educator> educators, CancellationToken cancellationToken = default);
+        void DeleteEducatorAsync(Educator educator);
+        void DeleteAllEducatorsAsync(List<Educator> educators);
         public List<Educator> FindEducatorAsync(Expression<Func<Educator, bool>> condition);
         Educator GetEducatorById(string id);
         void UpdateEducatorAsync(Educator educator);

@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using SmartQuiz.Application.Interfaces.Repositories;
+﻿using SmartQuiz.Application.Interfaces.Repositories;
 using SmartQuiz.Persistence.Context;
 using System.Linq.Expressions;
 

@@ -1,7 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SmartQuiz.Application.Interfaces.Repositories;
 using SmartQuiz.Persistence.Context;
+using SmartQuiz.Persistence.Repositories;
 
 namespace SmartQuiz.Persistence.Extensions
 {
@@ -11,6 +13,7 @@ namespace SmartQuiz.Persistence.Extensions
         {
             services.AddDbContext<SmartQuizDbContext>(options =>
                 options.UseSqlServer(config.GetConnectionString("DefaultConnection")));
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
         }
     }
 }

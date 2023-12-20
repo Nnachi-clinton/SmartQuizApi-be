@@ -7,8 +7,8 @@ namespace SmartQuiz.Application.Interfaces.Repositories
     {
         List<Student> GetStudentsAsync();
         void AddStudentAsync(Student student);
-        void DeleteStudentAsync(Student student, CancellationToken cancellationToken = default);
-        void DeleteAllStudentsAsync(List<Student> students, CancellationToken cancellationToken = default);
+        void DeleteStudentAsync(Student student);
+        void DeleteAllStudentsAsync(List<Student> students);
         public List<Student> FindStudentAsync(Expression<Func<Student, bool>> condition);
         Student GetStudentById(string id);
         void UpdateStudentAsync(Student student);

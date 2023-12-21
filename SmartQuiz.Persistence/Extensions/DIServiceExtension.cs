@@ -16,6 +16,7 @@ namespace SmartQuiz.Persistence.Extensions
         public static void AddDependencies(this IServiceCollection services, IConfiguration config)
         {
             services.AddScoped<IAuthenticationService, AuthenticationService>();
+            services.AddScoped<IEducatorServices, EducatorServices>();
             services.AddIdentity<Student, IdentityRole>()
             .AddEntityFrameworkStores<SmartQuizDbContext>()
             .AddDefaultTokenProviders();

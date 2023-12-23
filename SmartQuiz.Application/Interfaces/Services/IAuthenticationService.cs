@@ -7,7 +7,7 @@ namespace SmartQuiz.Application.Interfaces.Services
     {
        // Task<ApiResponse<string>> ForgotPasswordAsync(string email);
         Task<ApiResponse<string>> ResetPasswordAsync(string email, string token, string newPassword);
-        Task<ApiResponse<string>> ValidateTokenAsync(string token);
+        ApiResponse<string> ValidateTokenAsync(string token);
         ApiResponse<string> ExtractUserIdFromToken(string authToken);
         Task<ApiResponse<string>> ChangePasswordAsync(Student student, string currentPassword, string newPassword);
     }

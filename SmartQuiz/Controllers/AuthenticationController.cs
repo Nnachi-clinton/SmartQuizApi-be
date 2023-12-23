@@ -23,6 +23,16 @@ namespace SmartQuiz.Controllers
             _signInManager = signInManager;
         }
 
+        [HttpPost("Register")]
+        public async Task<IActionResult> Register([FromBody] StudentDto studentDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new ApiResponse<string>(false, "Invalid model state.", StatusCodes.Status400BadRequest, ModelState.Values.SelectMany(x => x.Errors).Select(x => x.ErrorMessage).ToList()));
+            }
+            return Ok(await _authenticationService.RegisterAsync(studentDto));
+        }
+
 
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model)

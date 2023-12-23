@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SmartQuiz.Application.DTO;
+using SmartQuiz.Application.Interfaces.Repositories;
 using SmartQuiz.Application.Interfaces.Services;
 using SmartQuiz.Domain;
 using SmartQuiz.Domain.Entities;
@@ -38,9 +40,10 @@ namespace SmartQuiz.Application.ServicesImplementation
             var user = await _userManager.FindByEmailAsync(studentDto.Email);
             if (user != null)
             {
-                return new ApiResponse<string>(false, "User with this email already exist.", StatusCodes.Status400BadRequest, new List<string>());
+                return new ApiResponse<string>(false, "User with this email already exists.", StatusCodes.Status400BadRequest, new List<string>());
             }
-            var student = new Student()
+
+            var newUser = new Student()
             {
                 FirstName = studentDto.FirstName,
                 LastName = studentDto.LastName,
@@ -51,21 +54,71 @@ namespace SmartQuiz.Application.ServicesImplementation
 
             try
             {
-                var result = await _userManager.CreateAsync(student, studentDto.Password);
+                var result = await _userManager.CreateAsync(newUser, studentDto.Password);
                 if (result.Succeeded)
                 {
-                    await _userManager.AddToRoleAsync(student, "SuperAdmin");
+                    await _userManager.AddToRoleAsync(newUser, "Student");
                 }
-                return new ApiResponse<string>(true, StatusCodes.Status201Created, "User registered successfully");
+
+                return new ApiResponse<string>(true, StatusCodes.Status201Created, "Student registered successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while adding a manager " + ex.InnerException);
                 var errorList = new List<string>();
-                errorList.Add(ex.InnerException.ToString());
+                if (ex.InnerException != null)
+                {
+                    errorList.Add(ex.InnerException.ToString());
+                }
+
                 return new ApiResponse<string>(false, "Error creating user.", StatusCodes.Status500InternalServerError, null, errorList);
             }
         }
+
+
+        //public async Task<ApiResponse<string>> LoginAsync(LoginDto loginDTO)
+        //{
+        //    try
+        //    {
+        //        var student = await _userManager.FindByEmailAsync(loginDTO.Email);
+        //        if (student == null)
+        //        {
+        //            return new ApiResponse<string>(false, StatusCodes.Status404NotFound, "User not found.");
+        //        }
+
+        //        var result = await _signInManager.CheckPasswordSignInAsync(student, loginDTO.Password, lockoutOnFailure: false);
+
+        //        switch (result)
+        //        {
+        //            case { Succeeded: true }:
+        //                var role = (await _userManager.GetRolesAsync(student)).FirstOrDefault();
+
+        //                if (student != null && !string.IsNullOrEmpty(role))
+        //                {
+        //                    return new ApiResponse<string>(true, StatusCodes.Status200OK, GenerateJwtToken(student, role));
+        //                }
+        //                else
+        //                {
+        //                    return new ApiResponse<string>(false, StatusCodes.Status500InternalServerError, "Error generating JWT token. User or role is null.");
+        //                }
+
+        //            case { IsLockedOut: true }:
+        //                return new ApiResponse<string>(false, StatusCodes.Status403Forbidden, $"Account is locked out. Please try again later or contact support. You can unlock your account after {_userManager.Options.Lockout.DefaultLockoutTimeSpan.TotalMinutes} minutes.");
+
+        //            case { RequiresTwoFactor: true }:
+        //                return new ApiResponse<string>(false, StatusCodes.Status401Unauthorized, "Two-factor authentication is required.");
+
+        //            case { IsNotAllowed: true }:
+        //                return new ApiResponse<string>(false, StatusCodes.Status401Unauthorized, "Login failed. Email confirmation is required.");
+
+        //            default:
+        //                return new ApiResponse<string>(false, StatusCodes.Status401Unauthorized, "Login failed. Invalid email or password.");
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return new ApiResponse<string>(false, StatusCodes.Status500InternalServerError, "Some error occurred while logging in." + ex.InnerException);
+        //    }
+        //}
 
         public async Task<ApiResponse<string>> LoginAsync(LoginDto loginDTO)
         {
@@ -76,17 +129,33 @@ namespace SmartQuiz.Application.ServicesImplementation
                 {
                     return new ApiResponse<string>(false, StatusCodes.Status404NotFound, "User not found.");
                 }
+
                 var result = await _signInManager.CheckPasswordSignInAsync(student, loginDTO.Password, lockoutOnFailure: false);
 
                 switch (result)
                 {
                     case { Succeeded: true }:
                         var role = (await _userManager.GetRolesAsync(student)).FirstOrDefault();
-                        return new ApiResponse<string>(true, StatusCodes.Status200OK, GenerateJwtToken(student, role));
+
+                        if (student != null && !string.IsNullOrEmpty(role))
+                        {
+                            var jwtToken = GenerateJwtToken(student, role);
+                            if (!string.IsNullOrEmpty(jwtToken))
+                            {
+                                return new ApiResponse<string>(true, StatusCodes.Status200OK, jwtToken);
+                            }
+                            else
+                            {
+                                return new ApiResponse<string>(false, StatusCodes.Status500InternalServerError, "Error generating JWT token. Token is null or empty.");
+                            }
+                        }
+                        else
+                        {
+                            return new ApiResponse<string>(false, StatusCodes.Status500InternalServerError, "Error generating JWT token. User or role is null or empty.");
+                        }
 
                     case { IsLockedOut: true }:
-                        return new ApiResponse<string>(false, StatusCodes.Status403Forbidden, $"Account is locked out. Please try again later or contact support." +
-                            $" You can unlock your account after {_userManager.Options.Lockout.DefaultLockoutTimeSpan.TotalMinutes} minutes.");
+                        return new ApiResponse<string>(false, StatusCodes.Status403Forbidden, $"Account is locked out. Please try again later or contact support. You can unlock your account after {_userManager.Options.Lockout.DefaultLockoutTimeSpan.TotalMinutes} minutes.");
 
                     case { RequiresTwoFactor: true }:
                         return new ApiResponse<string>(false, StatusCodes.Status401Unauthorized, "Two-factor authentication is required.");
@@ -100,7 +169,7 @@ namespace SmartQuiz.Application.ServicesImplementation
             }
             catch (Exception ex)
             {
-                return new ApiResponse<string>(false, StatusCodes.Status500InternalServerError, "Some error occurred while loggin in." + ex.InnerException);
+                return new ApiResponse<string>(false, StatusCodes.Status500InternalServerError, "Some error occurred while logging in." + ex.InnerException);
             }
         }
 

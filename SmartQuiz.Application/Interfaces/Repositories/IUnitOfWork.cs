@@ -5,6 +5,6 @@
         IEducatorRepository EducatorRepository { get; }
         IQuizRepository QuizRepository { get; }
         IStudentRepository StudentRepository { get; }
-        int SaveChanges();
+        int SaveChangesAsync();
     }
 }

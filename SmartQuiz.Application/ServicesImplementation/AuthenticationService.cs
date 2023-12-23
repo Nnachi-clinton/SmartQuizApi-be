@@ -29,7 +29,7 @@ namespace SmartQuiz.Application.ServicesImplementation
             _signInManager = signInManager;
             _logger = logger;
             _config = config;
-            _emailSettings = (IOptions<EmailSettings>)emailSettings.Value;
+            _emailSettings = emailSettings;
             _emailServices = new EmailServices(emailSettings);
         }
 

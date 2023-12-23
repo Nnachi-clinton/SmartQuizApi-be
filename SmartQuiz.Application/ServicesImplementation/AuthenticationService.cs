@@ -150,7 +150,7 @@ namespace SmartQuiz.Application.ServicesImplementation
             }
         }
 
-        public async Task<ApiResponse<string>> ValidateTokenAsync(string token)
+        public  ApiResponse<string> ValidateTokenAsync(string token)
         {
             try
             {

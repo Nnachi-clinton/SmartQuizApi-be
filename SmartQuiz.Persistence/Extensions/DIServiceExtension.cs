@@ -22,6 +22,14 @@ namespace SmartQuiz.Persistence.Extensions
             services.AddDbContext<SmartQuizDbContext>(options =>
                 options.UseSqlServer(config.GetConnectionString("DefaultConnection")));
             services.AddScoped<IUnitOfWork, UnitOfWork>();
+            var emailSettings = new EmailSettings();
+            config.GetSection("EmailSettings").Bind(emailSettings);
+            services.AddSingleton(emailSettings);
+            services.AddScoped<IEmailServices, EmailServices>();
+            var cloudinarySettings = new CloudinarySetting();
+            config.GetSection("CloudinarySettings").Bind(cloudinarySettings);
+            services.AddSingleton(cloudinarySettings);
+            services.AddScoped(typeof(ICloudinaryServices<>), typeof(CloudinaryServices<>));
         }
     }
 }

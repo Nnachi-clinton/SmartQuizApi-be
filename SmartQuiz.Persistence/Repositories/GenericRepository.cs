@@ -13,9 +13,9 @@ namespace SmartQuiz.Persistence.Repositories
             _context = context;
         }
 
-        public void AddAsync(T entity)
+        public async void AddAsync(T entity)
         {
-            _context.Set<T>().AddAsync(entity);
+           await _context.Set<T>().AddAsync(entity);
         }
 
         public void DeleteAllAsync(List<T> entities)

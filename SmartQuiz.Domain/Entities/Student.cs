@@ -10,6 +10,7 @@ namespace SmartQuiz.Domain.Entities
         public string State { get; set; }
         public string Gender { get; set; }
         public string ImageUrl { get; set; }
+        public IFormFile Photo { get; set; }
         public string VerificationToken { get; set; }
         public string PasswordResetToken { get; set; }
         public DateTime? ResetTokenExpires { get; set; }

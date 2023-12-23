@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using CloudinaryDotNet.Actions;
+using CloudinaryDotNet;
 using Serilog;
 using SmartQuiz.Application.DTO;
 using SmartQuiz.Application.Interfaces.Repositories;
@@ -11,13 +13,13 @@ namespace SmartQuiz.Application.ServicesImplementation
     public class StudentServices : IStudentServices
     {
         private readonly IUnitOfWork _unitOfWork;       
-        //private readonly ICloudinaryServices<Student> _cloudinaryServices;
+        private readonly ICloudinaryServices<Student> _cloudinaryServices;
         private readonly IMapper _mapper;
 
         public StudentServices(IUnitOfWork unitOfWork, ICloudinaryServices<Student> cloudinaryServices, IMapper mapper)
         {
             _unitOfWork = unitOfWork;            
-            //_cloudinaryServices = cloudinaryServices;
+            _cloudinaryServices = cloudinaryServices;
             _mapper = mapper;
         }
 
@@ -98,6 +100,24 @@ namespace SmartQuiz.Application.ServicesImplementation
                 }
 
                 _mapper.Map(updateStudentDto, student);
+
+                if (updateStudentDto.Photo != null)
+                {
+                    var photoUploadParams = new ImageUploadParams
+                    {
+                        File = new FileDescription(updateStudentDto.Photo.OpenReadStream(), updateStudentDto.Photo.FileName),
+                        Transformation = new Transformation().Width(500).Height(500).Crop("fill"),
+                        Folder = "students",
+                        UniqueFilename = false,
+                        AllowedFormats = new List<string> { "jpg", "jpeg", "png" },
+                        Tags = $"student_id_{studentId}"
+                    };
+
+                    var uploadResult = _cloudinary.Upload(photoUploadParams);
+
+                    // Get the secure URL of the uploaded photo
+                    student.PhotoUrl = uploadResult.SecureUrl.ToString();
+                }
 
                 _unitOfWork.StudentRepository.GetStudentById(studentId);
                 _unitOfWork.SaveChanges();

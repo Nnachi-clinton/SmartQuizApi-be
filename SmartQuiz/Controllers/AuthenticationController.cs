@@ -91,14 +91,14 @@ namespace SmartQuiz.Controllers
         }
 
         [HttpPost("validate-token")]
-        public async Task<IActionResult> ValidateToken([FromBody] ValidateTokenDto model)
+        public IActionResult ValidateToken([FromBody] ValidateTokenDto model)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(new ApiResponse<string>(false, "Invalid model state.", 400, null, ModelState.Values.SelectMany(x => x.Errors).Select(x => x.ErrorMessage).ToList()));
             }
 
-            var response = await _authenticationService.ValidateTokenAsync(model.Token);
+            var response =  _authenticationService.ValidateTokenAsync(model.Token);
 
             if (response.Succeeded)
             {

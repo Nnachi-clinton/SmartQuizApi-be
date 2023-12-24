@@ -11,8 +11,8 @@ builder.Services.AddSingleton(provider =>
 
     Account cloudinaryAccount = new(
         cloudinarySettings.CloudName,
-        cloudinarySettings.APIKey,
-        cloudinarySettings.APISecret);
+        cloudinarySettings.ApiKey,
+        cloudinarySettings.ApiSecret);
     return new Cloudinary(cloudinaryAccount);
 });
 

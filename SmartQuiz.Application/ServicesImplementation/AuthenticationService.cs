@@ -1,13 +1,17 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using SmartQuiz.Application.DTO;
+using SmartQuiz.Application.Interfaces.Repositories;
 using SmartQuiz.Application.Interfaces.Services;
 using SmartQuiz.Domain;
 using SmartQuiz.Domain.Entities;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 
 namespace SmartQuiz.Application.ServicesImplementation
@@ -18,18 +22,200 @@ namespace SmartQuiz.Application.ServicesImplementation
         private readonly SignInManager<Student> _signInManager;
         private readonly ILogger<AuthenticationService> _logger;
         private readonly IConfiguration _config;
-        //private readonly IOptions<EmailSettings> _emailSettings;
-        //private readonly EmailServices _emailServices;
+        private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly IOptions<EmailSettings> _emailSettings;
+        private readonly EmailServices _emailServices;
 
-        public AuthenticationService(UserManager<Student> userManager, SignInManager<Student> signInManager, ILogger<AuthenticationService> logger, IOptions<EmailSettings> emailSettings, IConfiguration config)
+        public AuthenticationService(UserManager<Student> userManager, SignInManager<Student> signInManager, ILogger<AuthenticationService> logger, IOptions<EmailSettings> emailSettings, IConfiguration config, RoleManager<IdentityRole> roleManager)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _config = config;
-            //_emailSettings = emailSettings.Value;
-            // _emailServices = new EmailServices(emailSettings);
+            _roleManager = roleManager;
+            _emailSettings = emailSettings;
+            _emailServices = new EmailServices(emailSettings);
         }
+
+        public async Task<ApiResponse<string>> RegisterAsync(StudentDto studentDto)
+        {
+            var user = await _userManager.FindByEmailAsync(studentDto.Email);
+            if (user != null)
+            {
+                return new ApiResponse<string>(false, "User with this email already exists.", StatusCodes.Status400BadRequest, new List<string>());
+            }
+
+            var newUser = new Student()
+            {
+                FirstName = studentDto.FirstName,
+                LastName = studentDto.LastName,
+                Email = studentDto.Email,
+                UserName = studentDto.Email,
+                PhoneNumber = studentDto.PhoneNumber,
+            };
+
+            try
+            {
+                var result = await _userManager.CreateAsync(newUser, studentDto.Password);
+                if (result.Succeeded)
+                {
+                    // Check if the role "Student" exists
+                    var roleExists = await _roleManager.RoleExistsAsync("Student");
+
+                    // If the role doesn't exist, create it
+                    if (!roleExists)
+                    {
+                        await _roleManager.CreateAsync(new IdentityRole("Student"));
+                    }
+
+                    // Add the user to the "Student" role
+                    await _userManager.AddToRoleAsync(newUser, "Student");
+
+                    return new ApiResponse<string>(true, StatusCodes.Status201Created, "Student registered successfully");
+                }
+
+                return new ApiResponse<string>(false, "Error creating user.", StatusCodes.Status500InternalServerError, null, result.Errors.Select(error => error.Description).ToList());
+            }
+            catch (Exception ex)
+            {
+                var errorList = new List<string> { ex.ToString() };
+                return new ApiResponse<string>(false, "Error creating user.", StatusCodes.Status500InternalServerError, null, errorList);
+            }
+        }
+
+        public async Task<ApiResponse<string>> LoginAsync(LoginDto loginDTO)
+        {
+            try
+            {
+                var student = await _userManager.FindByEmailAsync(loginDTO.Email);
+                if (student == null)
+                {
+                    return new ApiResponse<string>(false, StatusCodes.Status404NotFound, "User not found.");
+                }
+
+                var roles = await _userManager.GetRolesAsync(student);
+
+                if (roles.Any())
+                {
+                    var role = roles.First(); // or roles.FirstOrDefault() based on your requirement
+
+                    var result = await _signInManager.CheckPasswordSignInAsync(student, loginDTO.Password, lockoutOnFailure: false);
+
+                    switch (result)
+                    {
+                        case { Succeeded: true }:
+                            return new ApiResponse<string>(true, StatusCodes.Status200OK, GenerateJwtToken(student, role));
+
+                        case { IsLockedOut: true }:
+                            return new ApiResponse<string>(false, StatusCodes.Status403Forbidden, $"Account is locked out. Please try again later or contact support. You can unlock your account after {_userManager.Options.Lockout.DefaultLockoutTimeSpan.TotalMinutes} minutes.");
+
+                        case { RequiresTwoFactor: true }:
+                            return new ApiResponse<string>(false, StatusCodes.Status401Unauthorized, "Two-factor authentication is required.");
+
+                        case { IsNotAllowed: true }:
+                            return new ApiResponse<string>(false, StatusCodes.Status401Unauthorized, "Login failed. Email confirmation is required.");
+
+                        default:
+                            // Get the result.ToString() as a single string in the error list
+                            var errorList = new List<string> { result.ToString() };
+                            return new ApiResponse<string>(false, "Login failed. Invalid email or password.", StatusCodes.Status401Unauthorized, errorList);
+                    }
+                }
+                else
+                {
+                    // Log the issue
+                    _logger.LogError($"User {student.UserName} has no roles assigned.");
+                    return new ApiResponse<string>(false, StatusCodes.Status500InternalServerError, "Error generating JWT token. User has no role assigned.");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                _logger.LogError($"Error occurred while logging in: {ex}");
+                return new ApiResponse<string>(false, StatusCodes.Status500InternalServerError, "Some error occurred while logging in.");
+            }
+        }
+
+        public string GenerateJwtToken(Student contact, string roles)
+        {
+            var listOfClaims = new List<Claim>();
+
+            listOfClaims.Add(new Claim(ClaimTypes.NameIdentifier, contact.Id));
+            listOfClaims.Add(new Claim(ClaimTypes.Name, $"{contact.FirstName} {contact.LastName}"));
+            listOfClaims.Add(new Claim(ClaimTypes.Role, roles));
+
+            var key = Encoding.UTF8.GetBytes(_config.GetSection("JwtSettings:Secret").Value);
+            var expirationMinutes = Convert.ToDouble(_config["JwtSettings:AccessTokenExpiration"]);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(listOfClaims),
+                Expires = DateTime.UtcNow.AddMinutes(expirationMinutes),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var createdToken = tokenHandler.CreateToken(tokenDescriptor);
+
+            var token = tokenHandler.WriteToken(createdToken);
+
+            return token;
+        }
+
+
+
+        //private string GenerateJwtToken(Student contact, string roles)
+        //{
+        //    var jwtSettings = _config.GetSection("JwtSettings:Secret").Value;
+        //    var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings));
+        //    var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        //    var claims = new[]
+        //    {
+        //        new Claim(JwtRegisteredClaimNames.Sub, contact.UserName),
+        //        new Claim(JwtRegisteredClaimNames.Email, contact.Email),
+        //        new Claim(JwtRegisteredClaimNames.NameId, contact.Id),
+        //        new Claim(ClaimTypes.Role, roles)
+        //    };
+
+        //    var token = new JwtSecurityToken(
+        //        //issuer: _config.GetValue<string>("JwtSettings:ValidIssuer"),
+        //        //audience: _config.GetValue<string>("JwtSettings:ValidAudience"),
+        //        issuer: null,
+        //        audience: null,
+        //        claims: claims,
+        //        expires: DateTime.UtcNow.AddMinutes(int.Parse(_config.GetSection("JwtSettings:AccessTokenExpiration").Value)),
+        //        signingCredentials: credentials
+        //    );
+
+        //    return new JwtSecurityTokenHandler().WriteToken(token);
+        //}
+
+        //public string GenerateJwtToken(Student contact, string roles)
+        //{
+        //    var listOfClaims = new List<Claim>();
+
+        //    listOfClaims.Add(new Claim(ClaimTypes.NameIdentifier, contact.Id));
+        //    listOfClaims.Add(new Claim(ClaimTypes.Name, $"{contact.FirstName} {contact.LastName}"));
+        //    listOfClaims.Add(new Claim(ClaimTypes.Role, roles));
+
+        //    var key = Encoding.UTF8.GetBytes(_config.GetSection("JwtSettings:Secret").Value);
+        //    var expirationMinutes = Convert.ToDouble(_config["JwtSettings:AccessTokenExpiration"]);
+
+        //    var tokenDescriptor = new SecurityTokenDescriptor
+        //    {
+        //        Subject = new ClaimsIdentity(listOfClaims),
+        //        Expires = DateTime.UtcNow.AddMinutes(expirationMinutes),
+        //        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+        //    };
+
+        //    var tokenHandler = new JwtSecurityTokenHandler();
+        //    var createdToken = tokenHandler.CreateToken(tokenDescriptor);
+
+        //    var token = tokenHandler.WriteToken(createdToken);
+
+        //    return token;
+        //}
 
         public async Task<ApiResponse<string>> ChangePasswordAsync(Student student, string currentPassword, string newPassword)
         {
@@ -78,43 +264,43 @@ namespace SmartQuiz.Application.ServicesImplementation
             }
         }
 
-        //public async Task<ApiResponse<string>> ForgotPasswordAsync(string email)
-        //{
-        //    try
-        //    {
-        //        var student = await _userManager.FindByEmailAsync(email);
+        public async Task<ApiResponse<string>> ForgotPasswordAsync(string email)
+        {
+            try
+            {
+                var student = await _userManager.FindByEmailAsync(email);
 
-        //        if (student == null)
-        //        {
-        //            return new ApiResponse<string>(false, "User not found or email not confirmed.", StatusCodes.Status404NotFound, null, new List<string>());
-        //        }
-        //        string token = await _userManager.GeneratePasswordResetTokenAsync(student);
+                if (student == null)
+                {
+                    return new ApiResponse<string>(false, "User not found or email not confirmed.", StatusCodes.Status404NotFound, null, new List<string>());
+                }
+                string token = await _userManager.GeneratePasswordResetTokenAsync(student);
 
-        //        student.PasswordResetToken = token;
-        //        student.ResetTokenExpires = DateTime.UtcNow.AddHours(24);
+                student.PasswordResetToken = token;
+                student.ResetTokenExpires = DateTime.UtcNow.AddHours(24);
 
-        //        await _userManager.UpdateAsync(student);
+                await _userManager.UpdateAsync(student);
 
-        //        var resetPasswordUrl = "http://localhost:3000/reset-password?email=" + Uri.EscapeDataString(email) + "&token=" + Uri.EscapeDataString(token);
+                var resetPasswordUrl = "http://localhost:3000/reset-password?email=" + Uri.EscapeDataString(email) + "&token=" + Uri.EscapeDataString(token);
 
-        //        var mailRequest = new MailRequest
-        //        {
-        //            ToEmail = email,
-        //            Subject = "TicketEase Password Reset Instructions",
-        //            Body = $"Please reset your password by clicking <a href='{resetPasswordUrl}'>here</a>."
-        //        };
-        //        await _emailServices.SendHtmlEmailAsync(mailRequest);
+                var mailRequest = new MailRequest
+                {
+                    ToEmail = email,
+                    Subject = "TicketEase Password Reset Instructions",
+                    Body = $"Please reset your password by clicking <a href='{resetPasswordUrl}'>here</a>."
+                };
+                await _emailServices.SendHtmlEmailAsync(mailRequest);
 
-        //        return new ApiResponse<string>(true, "Password reset email sent successfully.", 200, null, new List<string>());
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Error occurred while resolving password change");
-        //        var errorList = new List<string>();
-        //        errorList.Add(ex.Message);
-        //        return new ApiResponse<string>(true, "Error occurred while resolving password change", 500, null, errorList);
-        //    }
-        //}
+                return new ApiResponse<string>(true, "Password reset email sent successfully.", 200, null, new List<string>());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while resolving password change");
+                var errorList = new List<string>();
+                errorList.Add(ex.Message);
+                return new ApiResponse<string>(true, "Error occurred while resolving password change", 500, null, errorList);
+            }
+        }
 
         public async Task<ApiResponse<string>> ResetPasswordAsync(string email, string token, string newPassword)
         {

@@ -59,7 +59,6 @@ namespace SmartQuiz.Application.ServicesImplementation
                 {
                     await _userManager.AddToRoleAsync(newUser, "Student");
                 }
-
                 return new ApiResponse<string>(true, StatusCodes.Status201Created, "Student registered successfully");
             }
             catch (Exception ex)
@@ -69,56 +68,9 @@ namespace SmartQuiz.Application.ServicesImplementation
                 {
                     errorList.Add(ex.InnerException.ToString());
                 }
-
                 return new ApiResponse<string>(false, "Error creating user.", StatusCodes.Status500InternalServerError, null, errorList);
             }
         }
-
-
-        //public async Task<ApiResponse<string>> LoginAsync(LoginDto loginDTO)
-        //{
-        //    try
-        //    {
-        //        var student = await _userManager.FindByEmailAsync(loginDTO.Email);
-        //        if (student == null)
-        //        {
-        //            return new ApiResponse<string>(false, StatusCodes.Status404NotFound, "User not found.");
-        //        }
-
-        //        var result = await _signInManager.CheckPasswordSignInAsync(student, loginDTO.Password, lockoutOnFailure: false);
-
-        //        switch (result)
-        //        {
-        //            case { Succeeded: true }:
-        //                var role = (await _userManager.GetRolesAsync(student)).FirstOrDefault();
-
-        //                if (student != null && !string.IsNullOrEmpty(role))
-        //                {
-        //                    return new ApiResponse<string>(true, StatusCodes.Status200OK, GenerateJwtToken(student, role));
-        //                }
-        //                else
-        //                {
-        //                    return new ApiResponse<string>(false, StatusCodes.Status500InternalServerError, "Error generating JWT token. User or role is null.");
-        //                }
-
-        //            case { IsLockedOut: true }:
-        //                return new ApiResponse<string>(false, StatusCodes.Status403Forbidden, $"Account is locked out. Please try again later or contact support. You can unlock your account after {_userManager.Options.Lockout.DefaultLockoutTimeSpan.TotalMinutes} minutes.");
-
-        //            case { RequiresTwoFactor: true }:
-        //                return new ApiResponse<string>(false, StatusCodes.Status401Unauthorized, "Two-factor authentication is required.");
-
-        //            case { IsNotAllowed: true }:
-        //                return new ApiResponse<string>(false, StatusCodes.Status401Unauthorized, "Login failed. Email confirmation is required.");
-
-        //            default:
-        //                return new ApiResponse<string>(false, StatusCodes.Status401Unauthorized, "Login failed. Invalid email or password.");
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return new ApiResponse<string>(false, StatusCodes.Status500InternalServerError, "Some error occurred while logging in." + ex.InnerException);
-        //    }
-        //}
 
         public async Task<ApiResponse<string>> LoginAsync(LoginDto loginDTO)
         {
@@ -139,19 +91,11 @@ namespace SmartQuiz.Application.ServicesImplementation
 
                         if (student != null && !string.IsNullOrEmpty(role))
                         {
-                            var jwtToken = GenerateJwtToken(student, role);
-                            if (!string.IsNullOrEmpty(jwtToken))
-                            {
-                                return new ApiResponse<string>(true, StatusCodes.Status200OK, jwtToken);
-                            }
-                            else
-                            {
-                                return new ApiResponse<string>(false, StatusCodes.Status500InternalServerError, "Error generating JWT token. Token is null or empty.");
-                            }
+                            return new ApiResponse<string>(true, StatusCodes.Status200OK, GenerateJwtToken(student, role));
                         }
                         else
                         {
-                            return new ApiResponse<string>(false, StatusCodes.Status500InternalServerError, "Error generating JWT token. User or role is null or empty.");
+                            return new ApiResponse<string>(false, StatusCodes.Status500InternalServerError, "Error generating JWT token. User or role is null.");
                         }
 
                     case { IsLockedOut: true }:
@@ -173,32 +117,57 @@ namespace SmartQuiz.Application.ServicesImplementation
             }
         }
 
+        //private string GenerateJwtToken(Student contact, string roles)
+        //{
+        //    var jwtSettings = _config.GetSection("JwtSettings:Secret").Value;
+        //    var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings));
+        //    var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        private string GenerateJwtToken(Student contact, string roles)
+        //    var claims = new[]
+        //    {
+        //        new Claim(JwtRegisteredClaimNames.Sub, contact.UserName),
+        //        new Claim(JwtRegisteredClaimNames.Email, contact.Email),
+        //        new Claim(JwtRegisteredClaimNames.NameId, contact.Id),
+        //        new Claim(ClaimTypes.Role, roles)
+        //    };
+
+        //    var token = new JwtSecurityToken(
+        //        //issuer: _config.GetValue<string>("JwtSettings:ValidIssuer"),
+        //        //audience: _config.GetValue<string>("JwtSettings:ValidAudience"),
+        //        issuer: null,
+        //        audience: null,
+        //        claims: claims,
+        //        expires: DateTime.UtcNow.AddMinutes(int.Parse(_config.GetSection("JwtSettings:AccessTokenExpiration").Value)),
+        //        signingCredentials: credentials
+        //    );
+
+        //    return new JwtSecurityTokenHandler().WriteToken(token);
+        //}
+
+        public string GenerateJwtToken(Student contact, string roles)
         {
-            var jwtSettings = _config.GetSection("JwtSettings:Secret").Value;
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings));
-            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var listOfClaims = new List<Claim>();
 
-            var claims = new[]
+            listOfClaims.Add(new Claim(ClaimTypes.NameIdentifier, contact.Id));
+            listOfClaims.Add(new Claim(ClaimTypes.Name, $"{contact.FirstName} {contact.LastName}"));
+            listOfClaims.Add(new Claim(ClaimTypes.Role, roles));
+
+            var key = Encoding.UTF8.GetBytes(_config.GetSection("JwtSettings:Secret").Value);
+            var expirationMinutes = Convert.ToDouble(_config["JwtSettings:AccessTokenExpiration"]);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
             {
-                new Claim(JwtRegisteredClaimNames.Sub, contact.UserName),
-                new Claim(JwtRegisteredClaimNames.Email, contact.Email),
-                new Claim(JwtRegisteredClaimNames.NameId, contact.Id),
-                new Claim(ClaimTypes.Role, roles)
+                Subject = new ClaimsIdentity(listOfClaims),
+                Expires = DateTime.UtcNow.AddMinutes(expirationMinutes),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
 
-            var token = new JwtSecurityToken(
-                //issuer: _config.GetValue<string>("JwtSettings:ValidIssuer"),
-                //audience: _config.GetValue<string>("JwtSettings:ValidAudience"),
-                issuer: null,
-                audience: null,
-                claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(int.Parse(_config.GetSection("JwtSettings:AccessTokenExpiration").Value)),
-                signingCredentials: credentials
-            );
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var createdToken = tokenHandler.CreateToken(tokenDescriptor);
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            var token = tokenHandler.WriteToken(createdToken);
+
+            return token;
         }
 
         public async Task<ApiResponse<string>> ChangePasswordAsync(Student student, string currentPassword, string newPassword)

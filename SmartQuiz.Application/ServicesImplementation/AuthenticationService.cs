@@ -22,15 +22,17 @@ namespace SmartQuiz.Application.ServicesImplementation
         private readonly SignInManager<Student> _signInManager;
         private readonly ILogger<AuthenticationService> _logger;
         private readonly IConfiguration _config;
+        private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IOptions<EmailSettings> _emailSettings;
         private readonly EmailServices _emailServices;
 
-        public AuthenticationService(UserManager<Student> userManager, SignInManager<Student> signInManager, ILogger<AuthenticationService> logger, IOptions<EmailSettings> emailSettings, IConfiguration config)
+        public AuthenticationService(UserManager<Student> userManager, SignInManager<Student> signInManager, ILogger<AuthenticationService> logger, IOptions<EmailSettings> emailSettings, IConfiguration config, RoleManager<IdentityRole> roleManager)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
             _config = config;
+            _roleManager = roleManager;
             _emailSettings = emailSettings;
             _emailServices = new EmailServices(emailSettings);
         }
@@ -57,17 +59,26 @@ namespace SmartQuiz.Application.ServicesImplementation
                 var result = await _userManager.CreateAsync(newUser, studentDto.Password);
                 if (result.Succeeded)
                 {
+                    // Check if the role "Student" exists
+                    var roleExists = await _roleManager.RoleExistsAsync("Student");
+
+                    // If the role doesn't exist, create it
+                    if (!roleExists)
+                    {
+                        await _roleManager.CreateAsync(new IdentityRole("Student"));
+                    }
+
+                    // Add the user to the "Student" role
                     await _userManager.AddToRoleAsync(newUser, "Student");
+
+                    return new ApiResponse<string>(true, StatusCodes.Status201Created, "Student registered successfully");
                 }
-                return new ApiResponse<string>(true, StatusCodes.Status201Created, "Student registered successfully");
+
+                return new ApiResponse<string>(false, "Error creating user.", StatusCodes.Status500InternalServerError, null, result.Errors.Select(error => error.Description).ToList());
             }
             catch (Exception ex)
             {
-                var errorList = new List<string>();
-                if (ex.InnerException != null)
-                {
-                    errorList.Add(ex.InnerException.ToString());
-                }
+                var errorList = new List<string> { ex.ToString() };
                 return new ApiResponse<string>(false, "Error creating user.", StatusCodes.Status500InternalServerError, null, errorList);
             }
         }
@@ -82,40 +93,76 @@ namespace SmartQuiz.Application.ServicesImplementation
                     return new ApiResponse<string>(false, StatusCodes.Status404NotFound, "User not found.");
                 }
 
-                var result = await _signInManager.CheckPasswordSignInAsync(student, loginDTO.Password, lockoutOnFailure: false);
+                var roles = await _userManager.GetRolesAsync(student);
 
-                switch (result)
+                if (roles.Any())
                 {
-                    case { Succeeded: true }:
-                        var role = (await _userManager.GetRolesAsync(student)).FirstOrDefault();
+                    var role = roles.First(); // or roles.FirstOrDefault() based on your requirement
 
-                        if (student != null && !string.IsNullOrEmpty(role))
-                        {
+                    var result = await _signInManager.CheckPasswordSignInAsync(student, loginDTO.Password, lockoutOnFailure: false);
+
+                    switch (result)
+                    {
+                        case { Succeeded: true }:
                             return new ApiResponse<string>(true, StatusCodes.Status200OK, GenerateJwtToken(student, role));
-                        }
-                        else
-                        {
-                            return new ApiResponse<string>(false, StatusCodes.Status500InternalServerError, "Error generating JWT token. User or role is null.");
-                        }
 
-                    case { IsLockedOut: true }:
-                        return new ApiResponse<string>(false, StatusCodes.Status403Forbidden, $"Account is locked out. Please try again later or contact support. You can unlock your account after {_userManager.Options.Lockout.DefaultLockoutTimeSpan.TotalMinutes} minutes.");
+                        case { IsLockedOut: true }:
+                            return new ApiResponse<string>(false, StatusCodes.Status403Forbidden, $"Account is locked out. Please try again later or contact support. You can unlock your account after {_userManager.Options.Lockout.DefaultLockoutTimeSpan.TotalMinutes} minutes.");
 
-                    case { RequiresTwoFactor: true }:
-                        return new ApiResponse<string>(false, StatusCodes.Status401Unauthorized, "Two-factor authentication is required.");
+                        case { RequiresTwoFactor: true }:
+                            return new ApiResponse<string>(false, StatusCodes.Status401Unauthorized, "Two-factor authentication is required.");
 
-                    case { IsNotAllowed: true }:
-                        return new ApiResponse<string>(false, StatusCodes.Status401Unauthorized, "Login failed. Email confirmation is required.");
+                        case { IsNotAllowed: true }:
+                            return new ApiResponse<string>(false, StatusCodes.Status401Unauthorized, "Login failed. Email confirmation is required.");
 
-                    default:
-                        return new ApiResponse<string>(false, StatusCodes.Status401Unauthorized, "Login failed. Invalid email or password.");
+                        default:
+                            // Get the result.ToString() as a single string in the error list
+                            var errorList = new List<string> { result.ToString() };
+                            return new ApiResponse<string>(false, "Login failed. Invalid email or password.", StatusCodes.Status401Unauthorized, errorList);
+                    }
+                }
+                else
+                {
+                    // Log the issue
+                    _logger.LogError($"User {student.UserName} has no roles assigned.");
+                    return new ApiResponse<string>(false, StatusCodes.Status500InternalServerError, "Error generating JWT token. User has no role assigned.");
                 }
             }
             catch (Exception ex)
             {
-                return new ApiResponse<string>(false, StatusCodes.Status500InternalServerError, "Some error occurred while logging in." + ex.InnerException);
+                // Log the exception
+                _logger.LogError($"Error occurred while logging in: {ex}");
+                return new ApiResponse<string>(false, StatusCodes.Status500InternalServerError, "Some error occurred while logging in.");
             }
         }
+
+        public string GenerateJwtToken(Student contact, string roles)
+        {
+            var listOfClaims = new List<Claim>();
+
+            listOfClaims.Add(new Claim(ClaimTypes.NameIdentifier, contact.Id));
+            listOfClaims.Add(new Claim(ClaimTypes.Name, $"{contact.FirstName} {contact.LastName}"));
+            listOfClaims.Add(new Claim(ClaimTypes.Role, roles));
+
+            var key = Encoding.UTF8.GetBytes(_config.GetSection("JwtSettings:Secret").Value);
+            var expirationMinutes = Convert.ToDouble(_config["JwtSettings:AccessTokenExpiration"]);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(listOfClaims),
+                Expires = DateTime.UtcNow.AddMinutes(expirationMinutes),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var createdToken = tokenHandler.CreateToken(tokenDescriptor);
+
+            var token = tokenHandler.WriteToken(createdToken);
+
+            return token;
+        }
+
+
 
         //private string GenerateJwtToken(Student contact, string roles)
         //{
@@ -144,31 +191,31 @@ namespace SmartQuiz.Application.ServicesImplementation
         //    return new JwtSecurityTokenHandler().WriteToken(token);
         //}
 
-        public string GenerateJwtToken(Student contact, string roles)
-        {
-            var listOfClaims = new List<Claim>();
+        //public string GenerateJwtToken(Student contact, string roles)
+        //{
+        //    var listOfClaims = new List<Claim>();
 
-            listOfClaims.Add(new Claim(ClaimTypes.NameIdentifier, contact.Id));
-            listOfClaims.Add(new Claim(ClaimTypes.Name, $"{contact.FirstName} {contact.LastName}"));
-            listOfClaims.Add(new Claim(ClaimTypes.Role, roles));
+        //    listOfClaims.Add(new Claim(ClaimTypes.NameIdentifier, contact.Id));
+        //    listOfClaims.Add(new Claim(ClaimTypes.Name, $"{contact.FirstName} {contact.LastName}"));
+        //    listOfClaims.Add(new Claim(ClaimTypes.Role, roles));
 
-            var key = Encoding.UTF8.GetBytes(_config.GetSection("JwtSettings:Secret").Value);
-            var expirationMinutes = Convert.ToDouble(_config["JwtSettings:AccessTokenExpiration"]);
+        //    var key = Encoding.UTF8.GetBytes(_config.GetSection("JwtSettings:Secret").Value);
+        //    var expirationMinutes = Convert.ToDouble(_config["JwtSettings:AccessTokenExpiration"]);
 
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(listOfClaims),
-                Expires = DateTime.UtcNow.AddMinutes(expirationMinutes),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
+        //    var tokenDescriptor = new SecurityTokenDescriptor
+        //    {
+        //        Subject = new ClaimsIdentity(listOfClaims),
+        //        Expires = DateTime.UtcNow.AddMinutes(expirationMinutes),
+        //        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+        //    };
 
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var createdToken = tokenHandler.CreateToken(tokenDescriptor);
+        //    var tokenHandler = new JwtSecurityTokenHandler();
+        //    var createdToken = tokenHandler.CreateToken(tokenDescriptor);
 
-            var token = tokenHandler.WriteToken(createdToken);
+        //    var token = tokenHandler.WriteToken(createdToken);
 
-            return token;
-        }
+        //    return token;
+        //}
 
         public async Task<ApiResponse<string>> ChangePasswordAsync(Student student, string currentPassword, string newPassword)
         {

@@ -10,7 +10,9 @@ namespace SmartQuiz.Application.Interfaces.Repositories
         void DeleteStudentAsync(Student student);
         void DeleteAllStudentsAsync(List<Student> students);
         public List<Student> FindStudentAsync(Expression<Func<Student, bool>> condition);
+        Student GetStudent(Expression<Func<Student, bool>> id);
         Student GetStudentById(string id);
         void UpdateStudentAsync(Student student);
+
     }
 }

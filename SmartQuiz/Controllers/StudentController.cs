@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using SendGrid.Helpers.Errors.Model;
 using SmartQuiz.Application.DTO;
 using SmartQuiz.Application.Interfaces.Services;
 using SmartQuiz.Domain;
@@ -10,7 +11,7 @@ namespace SmartQuiz.Controllers
     public class StudentController : ControllerBase
     {
         private readonly IStudentServices _studentServices;
-        private readonly ILogger<StudentController> _logger;              
+        private readonly ILogger<StudentController> _logger;
 
         public StudentController(IStudentServices studentServices, ILogger<StudentController> logger)
         {
@@ -21,7 +22,7 @@ namespace SmartQuiz.Controllers
         [HttpGet("GetAllStudents")]
         public IActionResult GetAllStudents()
         {
-            var response = _studentServices;
+            var response = _studentServices.GetAllStudents();
             return Ok(response);
         }
 
@@ -33,19 +34,27 @@ namespace SmartQuiz.Controllers
             {
                 return Ok(response.Data);
             }
-            return StatusCode(response.StatusCode, new {errors = response.Errors});
+            return StatusCode(response.StatusCode, new { errors = response.Errors });
         }
 
-        [HttpPut("UpdateStudent/{id}")]
-        public IActionResult UpdateStudent(string studentId, [FromBody] UpdateStudentDto updateStudentDto)
+        [HttpPut("UpdateStudent/{Id}")]
+        public async Task<IActionResult> UpdateStudent(string studentId, [FromBody] UpdateStudentDto updateStudentDto)
         {
-            var updateStudent = _studentServices.UpdateStudentAsync(studentId, updateStudentDto);
-            if (updateStudent.Succeeded)
+            var result = await _studentServices.UpdateStudentAsync(studentId, updateStudentDto);
+
+            if (result.Succeeded)
             {
                 return Ok(new ApiResponse<bool>(true, "Student updated successfully.", 200, true, null));
             }
-            _logger.LogError("Student update failed: {Message}", updateStudent.Message);
-            return BadRequest(new ApiResponse<bool>(false, "Failed to update student.", 400, false, updateStudent.Errors));
+
+            _logger.LogError("Student update failed: {Message}", result.Message);
+            return BadRequest(new ApiResponse<bool>(false, "Failed to update student.", 400, false, result.Errors));
+        }
+
+        [HttpPatch("{studentId}/profile-photo")]
+        public async Task<IActionResult> UpdateProfilePhoto(string studentId, [FromForm] UpdatePhotoDto photo)
+        {           
+              return  Ok( await _studentServices.UpdateStudentProfilePhoto(studentId, photo));                  
         }
 
         [HttpDelete("DeleteStudentById")]

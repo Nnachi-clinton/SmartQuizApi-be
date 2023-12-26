@@ -13,9 +13,9 @@ namespace SmartQuiz.Persistence.Repositories
             _context = context;
         }
 
-        public void AddAsync(T entity)
+        public async void AddAsync(T entity)
         {
-            _context.Set<T>().AddAsync(entity);
+           await _context.Set<T>().AddAsync(entity);
         }
 
         public void DeleteAllAsync(List<T> entities)
@@ -36,6 +36,10 @@ namespace SmartQuiz.Persistence.Repositories
         public List<T> FindAsync(Expression<Func<T, bool>> predicate)
         {
            return _context.Set<T>().Where(predicate).ToList();
+        }
+        public T FindA(Expression<Func<T, bool>> predicate)
+        {
+            return _context.Set<T>().FirstOrDefault(predicate);
         }
 
         public List<T> GetAllAsync()

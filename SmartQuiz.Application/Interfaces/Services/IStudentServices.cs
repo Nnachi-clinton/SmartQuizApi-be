@@ -1,4 +1,5 @@
-﻿using SmartQuiz.Application.DTO;
+﻿using Microsoft.AspNetCore.Http;
+using SmartQuiz.Application.DTO;
 using SmartQuiz.Domain;
 
 namespace SmartQuiz.Application.Interfaces.Services
@@ -7,7 +8,8 @@ namespace SmartQuiz.Application.Interfaces.Services
     {
         List<StudentDto> GetAllStudents();
         ApiResponse<StudentDto> GetStudentByIdAsync(string studentId);
-        ApiResponse<bool> UpdateStudentAsync(string studentId, UpdateStudentDto updateStudentDto);
+        Task<ApiResponse<bool>> UpdateStudentAsync(string studentId, UpdateStudentDto updateStudentDto);
         Task<ApiResponse<StudentDto>> DeleteStudentAsync(string studentId);
+        Task<ApiResponse<bool>> UpdateStudentProfilePhoto(string studentId, UpdatePhotoDto photo);
     }
 }

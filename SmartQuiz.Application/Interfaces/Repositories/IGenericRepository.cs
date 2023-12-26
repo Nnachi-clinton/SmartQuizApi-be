@@ -7,6 +7,7 @@ namespace SmartQuiz.Application.Interfaces.Repositories
         T GetByIdAsync(string id);
         List<T> GetAllAsync();
         List<T> FindAsync(Expression<Func<T, bool>> predicate);
+        T FindA(Expression<Func<T, bool>> predicate);
         void AddAsync(T entity);
         void UpdateAsync(T entity);
         void DeleteAsync(T entity);

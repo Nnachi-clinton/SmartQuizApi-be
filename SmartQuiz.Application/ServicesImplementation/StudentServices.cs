@@ -7,6 +7,7 @@ using SmartQuiz.Application.Interfaces.Repositories;
 using SmartQuiz.Application.Interfaces.Services;
 using SmartQuiz.Domain;
 using SmartQuiz.Domain.Entities;
+using Microsoft.AspNetCore.Http;
 
 namespace SmartQuiz.Application.ServicesImplementation
 {
@@ -34,7 +35,7 @@ namespace SmartQuiz.Application.ServicesImplementation
 
                 }
                 _unitOfWork.StudentRepository.DeleteStudentAsync(existingStudent);
-                _unitOfWork.SaveChanges();
+                _unitOfWork.SaveChangesAsync();
                 return Task.FromResult(new ApiResponse<StudentDto>(true, 200, $"Student deleted successfully ."));
             }
             catch (Exception ex) 
@@ -88,7 +89,7 @@ namespace SmartQuiz.Application.ServicesImplementation
             }
         }
 
-        public ApiResponse<bool> UpdateStudentAsync(string studentId, UpdateStudentDto updateStudentDto)
+        public async Task<ApiResponse<bool>> UpdateStudentAsync(string studentId, UpdateStudentDto updateStudentDto)
         {
             try
             {
@@ -99,37 +100,57 @@ namespace SmartQuiz.Application.ServicesImplementation
                     return ApiResponse<bool>.Failed(false, "Student not found.", 404, new List<string> { "Student not found." });
                 }
 
-                _mapper.Map(updateStudentDto, student);
-
-                if (updateStudentDto.Photo != null)
-                {
-                    var photoUploadParams = new ImageUploadParams
-                    {
-                        File = new FileDescription(updateStudentDto.Photo.OpenReadStream(), updateStudentDto.Photo.FileName),
-                        Transformation = new Transformation().Width(500).Height(500).Crop("fill"),
-                        Folder = "students",
-                        UniqueFilename = false,
-                        AllowedFormats = new List<string> { "jpg", "jpeg", "png" },
-                        Tags = $"student_id_{studentId}"
-                    };
-
-                    var uploadResult = _cloudinary.Upload(photoUploadParams);
-
-                    // Get the secure URL of the uploaded photo
-                    student.PhotoUrl = uploadResult.SecureUrl.ToString();
-                }
-
-                _unitOfWork.StudentRepository.GetStudentById(studentId);
-                _unitOfWork.SaveChanges();
+                _mapper.Map(updateStudentDto, student);                
+                _unitOfWork.StudentRepository.UpdateStudentAsync(student);
+                 _unitOfWork.SaveChangesAsync();
 
                 return ApiResponse<bool>.Success(true, "Student updated successfully.", 200);
-            }
+            }            
             catch (Exception ex)
             {
                 Log.Error(ex, "An error occurred while updating the student. StudentId: {StudentId}", studentId);
-
                 return ApiResponse<bool>.Failed(false, "An error occurred while updating the student.", 500, new List<string> { ex.Message });
             }
         }
+
+        public async Task<ApiResponse<bool>> UpdateStudentProfilePhoto(string studentId, UpdatePhotoDto photo)
+        {
+
+            try
+            {
+                if (photo == null || photo.Formfile == null || photo.Formfile.Length<=0)
+                {
+                    return ApiResponse<bool>.Failed(false, $"Invalid file format", 404, new List<string> { $"Invalid file format" });
+                }
+                var student = _unitOfWork.StudentRepository.GetStudentById(studentId);
+                if (student == null)
+                {
+                    return ApiResponse<bool>.Failed(false, $"Student with ID {studentId} not found.", 404, new List<string> { $"Student with ID {studentId} not found." });
+                }
+
+                string imageurl = await _cloudinaryServices.UploadImageAsync(studentId, photo.Formfile);
+                if (imageurl == null)
+                {
+                    return ApiResponse<bool>.Failed(false, $"failed to upload image for Student with ID {studentId}", 404, new List<string> { $"failed to upload image for Student with ID{studentId}" });
+                }
+
+                student.ImageUrl = imageurl;
+
+                _unitOfWork.StudentRepository.UpdateStudentAsync(student);
+                 _unitOfWork.SaveChangesAsync();
+                return ApiResponse<bool>.Success(true, "Student profile photo updated successfully.", 200);
+
+
+            }
+            catch (Exception ex)
+            {
+
+                Log.Error(ex, "An error occurred while updating profile photo. StudentId: {StudentId}", studentId);
+                return ApiResponse<bool>.Failed(false, "An error occurred while updating the student.", 500, new List<string> { ex.Message });
+            
+            }
+            
+        }
+
     }
 }

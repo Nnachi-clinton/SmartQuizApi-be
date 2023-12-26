@@ -53,6 +53,7 @@
         public static ApiResponse<T> Failed(bool isSucceeded, string message, int statusCode, List<string> errors)
         {
             return new ApiResponse<T>(isSucceeded, message, statusCode, errors);
-        }
+        } 
+      
     }
 }

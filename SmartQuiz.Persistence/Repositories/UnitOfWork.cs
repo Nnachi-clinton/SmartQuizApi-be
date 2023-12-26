@@ -27,9 +27,14 @@ namespace SmartQuiz.Persistence.Repositories
            _context.Dispose();
         }
 
-        public int SaveChanges()
+        public int SaveChangesAsync()
         {
-           return _context.SaveChanges();
+            return _context.SaveChanges();
         }
+
+        //Task<int> IUnitOfWork.SaveChangesAsync()
+        //{
+        //    return _context.SaveChangesAsync();
+        //}
     }
 }

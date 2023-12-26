@@ -23,25 +23,47 @@ namespace SmartQuiz.Controllers
             _signInManager = signInManager;
         }
 
-        //[HttpPost("forgot-password")]
-        //public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model)
-        //{
-        //    if (!ModelState.IsValid)
-        //    {
-        //        return BadRequest(new ApiResponse<string>(false, "Invalid model state.", 400, null, ModelState.Values.SelectMany(x => x.Errors).Select(x => x.ErrorMessage).ToList()));
-        //    }
+        [HttpPost("Register")]
+        public async Task<IActionResult> Register([FromBody] StudentDto studentDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new ApiResponse<string>(false, "Invalid model state.", StatusCodes.Status400BadRequest, ModelState.Values.SelectMany(x => x.Errors).Select(x => x.ErrorMessage).ToList()));
+            }
+            return Ok(await _authenticationService.RegisterAsync(studentDto));
+        }
 
-        //    var response = await _authenticationService.ForgotPasswordAsync(model.Email);
+        [HttpPost("Login")]
+        public async Task<IActionResult> Login(LoginDto loginDTO)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new ApiResponse<string>(false, "Invalid model state.", 400, ModelState.Values.SelectMany(x => x.Errors).Select(x => x.ErrorMessage).ToList()));
+            }
+            return Ok(await _authenticationService.LoginAsync(loginDTO));
+        }
 
-        //    if (response.Succeeded)
-        //    {
-        //        return Ok(new ApiResponse<string>(true, response.Message, response.StatusCode, null, new List<string>()));
-        //    }
-        //    else
-        //    {
-        //        return BadRequest(new ApiResponse<string>(false, response.Message, response.StatusCode, null, response.Errors));
-        //    }
-        //}
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new ApiResponse<string>(false, "Invalid model state.", 400, null, ModelState.Values.SelectMany(x => x.Errors).Select(x => x.ErrorMessage).ToList()));
+            }
+
+            var response = await _authenticationService.ForgotPasswordAsync(model.Email);
+
+            if (response.Succeeded)
+            {
+                return Ok(new ApiResponse<string>(true, response.Message, response.StatusCode, null, new List<string>()));
+            }
+            else
+            {
+                return BadRequest(new ApiResponse<string>(false, response.Message, response.StatusCode, null, response.Errors));
+            }
+        }
+
 
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
@@ -69,14 +91,14 @@ namespace SmartQuiz.Controllers
         }
 
         [HttpPost("validate-token")]
-        public async Task<IActionResult> ValidateToken([FromBody] ValidateTokenDto model)
+        public IActionResult ValidateToken([FromBody] ValidateTokenDto model)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(new ApiResponse<string>(false, "Invalid model state.", 400, null, ModelState.Values.SelectMany(x => x.Errors).Select(x => x.ErrorMessage).ToList()));
             }
 
-            var response = await _authenticationService.ValidateTokenAsync(model.Token);
+            var response =  _authenticationService.ValidateTokenAsync(model.Token);
 
             if (response.Succeeded)
             {

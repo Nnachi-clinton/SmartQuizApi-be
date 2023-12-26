@@ -37,6 +37,10 @@ namespace SmartQuiz.Persistence.Repositories
         {
            return _context.Set<T>().Where(predicate).ToList();
         }
+        public T FindA(Expression<Func<T, bool>> predicate)
+        {
+            return _context.Set<T>().FirstOrDefault(predicate);
+        }
 
         public List<T> GetAllAsync()
         {

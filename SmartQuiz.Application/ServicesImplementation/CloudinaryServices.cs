@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using SmartQuiz.Application.Interfaces.Repositories;
 using SmartQuiz.Application.Interfaces.Services;
 using SmartQuiz.Domain.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace SmartQuiz.Application.ServicesImplementation
 {
@@ -12,9 +13,12 @@ namespace SmartQuiz.Application.ServicesImplementation
     {
         private readonly IGenericRepository<T> _repository;
         private readonly Cloudinary _cloudinary;
+        private readonly ILogger<T> _logger;
 
-        public CloudinaryServices(IGenericRepository<T> repository, IConfiguration configuration)
+
+        public CloudinaryServices(IGenericRepository<T> repository, IConfiguration configuration, ILogger<T> logger)
         {
+            _logger = logger;
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
 
             var cloudinarySettings = configuration.GetSection("CloudinarySettings").Get<CloudinarySetting>();
@@ -26,7 +30,7 @@ namespace SmartQuiz.Application.ServicesImplementation
             ));
         }
 
-        public async Task<string> UploadImage(string entityId, IFormFile file)
+        public async Task<string> UploadImageAsync(string entityId, IFormFile file)
         {
             var entity = _repository.GetByIdAsync(entityId);
 
@@ -47,12 +51,12 @@ namespace SmartQuiz.Application.ServicesImplementation
 
             try
             {
-                _repository.SaveChangesAsync();
+                //_repository.SaveChangesAsync();
                 return uploadResult.SecureUrl.AbsoluteUri;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: {ex}");
+            _logger.LogError("Database update failed: {Message}", ex.Message);
                 return "Database update error occurred";
             }
         }

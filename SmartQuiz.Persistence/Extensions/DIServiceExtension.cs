@@ -30,6 +30,8 @@ namespace SmartQuiz.Persistence.Extensions
             config.GetSection("CloudinarySettings").Bind(cloudinarySettings);
             services.AddSingleton(cloudinarySettings);
             services.AddScoped(typeof(ICloudinaryServices<>), typeof(CloudinaryServices<>));
+            services.AddScoped<IStudentServices, StudentServices>();
+            services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
         }
     }
 }

@@ -18,5 +18,9 @@ namespace SmartQuiz.Application.DTO
         [Required(ErrorMessage = "Password is required.")]
         public string Password { get; set; }
 
+        public string Address { get; set; }
+        public string State { get; set; }
+        public string Gender { get; set; }
+        public string ImageUrl { get; set; }
     }
 }

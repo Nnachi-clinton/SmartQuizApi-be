@@ -3,6 +3,7 @@ using CloudinaryDotNet;
 using Microsoft.Extensions.Options;
 using SmartQuiz.Persistence.Extensions;
 using SmartQuiz.Domain.Entities;
+using SmartQuiz.Mapper;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton(provider =>
@@ -34,6 +35,7 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddAutoMapper(typeof(MapperProfile));
 
 var app = builder.Build();
 

@@ -4,6 +4,6 @@ namespace SmartQuiz.Application.Interfaces.Services
 {
     public interface ICloudinaryServices<T> where T : class
     {
-        Task<string> UploadImage(string entityId, IFormFile file);
+        Task<string> UploadImageAsync(string entityId, IFormFile file);
     }
 }

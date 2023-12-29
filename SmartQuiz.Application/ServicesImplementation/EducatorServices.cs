@@ -18,7 +18,7 @@ namespace SmartQuiz.Application.ServicesImplementation
         public IEnumerable<Quiz> GetQuizzesByEducatorId(string educatorId)
         {
             // Implement your business logic here
-            var quizzes =  _unitOfWork.QuizRepository.GetAllAsync(q => q.EducatorId == educatorId);
+            var quizzes =  _unitOfWork.QuizRepository.(q => q.EducatorId == educatorId);
             return quizzes;
         }
 

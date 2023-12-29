@@ -8,6 +8,7 @@ namespace SmartQuiz.Application.Interfaces.Repositories
         List<T> GetAllAsync();
         List<T> GetAllAsync(Expression<Func<T, bool>> educatorId);
         List<T> FindAsync(Expression<Func<T, bool>> predicate);
+        T FindA(Expression<Func<T, bool>> predicate);
         void AddAsync(T entity);
         void UpdateAsync(T entity);
         void DeleteAsync(T entity);

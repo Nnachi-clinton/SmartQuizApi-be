@@ -36,6 +36,11 @@ namespace SmartQuiz.Persistence.Repositories
            return GetByIdAsync(id);
         }
 
+        public Student GetStudent(Expression<Func<Student, bool>> id)
+        {
+            return FindA(id);
+        }
+
         public List<Student> GetStudentsAsync()
         {
             return GetAllAsync();
@@ -45,5 +50,7 @@ namespace SmartQuiz.Persistence.Repositories
         {
            UpdateAsync(student);
         }
+       
+       
     }
 }

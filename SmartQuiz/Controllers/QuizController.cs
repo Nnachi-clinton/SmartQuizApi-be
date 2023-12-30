@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using SmartQuiz.Domain.Entities;
 
 namespace SmartQuiz.Controllers
 {
@@ -6,5 +7,6 @@ namespace SmartQuiz.Controllers
     [ApiController]
     public class QuizController : ControllerBase
     {
+        
     }
 }

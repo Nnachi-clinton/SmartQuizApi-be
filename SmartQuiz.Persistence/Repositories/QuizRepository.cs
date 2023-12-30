@@ -30,6 +30,11 @@ namespace SmartQuiz.Persistence.Repositories
             return FindAsync(condition);
         }
 
+        public List<Quiz> GetAllQuiz(Expression<Func<Quiz, bool>> educatorid)
+        {
+           return FindAsync(educatorid);
+        }
+
         public List<Quiz> GetQuizAsync()
         {
            return GetAllAsync();

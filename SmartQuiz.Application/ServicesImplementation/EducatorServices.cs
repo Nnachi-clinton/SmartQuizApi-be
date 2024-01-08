@@ -18,7 +18,7 @@ namespace SmartQuiz.Application.ServicesImplementation
         public IEnumerable<Quiz> GetQuizzesByEducatorId(string educatorId)
         {
             // Implement your business logic here
-            var quizzes =  _unitOfWork.QuizRepository.(q => q.EducatorId == educatorId);
+            var quizzes =  _unitOfWork.QuizRepository.GetAllQuiz(q => q.EducatorId == educatorId);
             return quizzes;
         }
 
@@ -40,7 +40,7 @@ namespace SmartQuiz.Application.ServicesImplementation
             }
 
             _unitOfWork.QuizRepository.DeleteAsync(quiz);
-           _unitOfWork.SaveChanges();
+           _unitOfWork.SaveChangesAsync();
 
             return true;
         }
